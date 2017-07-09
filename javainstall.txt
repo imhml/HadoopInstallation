@@ -1,0 +1,4 @@
+To install java for hadoop installtion the best site i have found so far as a refernce is given here :http://www.wikihow.com/Install-Oracle-Java-on-Ubuntu-Linux
+
+if you follow this site then you won't have a problem on installing java on you machine.
+
