@@ -1,0 +1,1 @@
+This repository explains on how to set up the single node hadoop framework. It assumes that you have java installed on your operating system. In my case the installed version of java is jdk 1.8.0_131.
