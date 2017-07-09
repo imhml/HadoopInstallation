@@ -1,0 +1,259 @@
+1. Enter as root user as:
+$sudo su
+
+2. Adding a dedicated Hadoop system user called hduser
+>Create a group called hadoop
+$sudo addgroup hadoop
+>Create a user called hduser
+$sudo adduser hduser
+>Add hduser to hadoop group 
+$sudo adduser hduser hadoop
+
+3. Add the ‘hduser’ to sudoers list so that hduser can do admin tasks.
+Add a line under ##Allow member of group sudo to execute any command anywhere in the	format. (Right click and Paste)
+  hduser ALL=(ALL) ALL 
+Press ctrl+x, Y enter enter 
+This will add the user hduser and the group hadoop to your local machine.
+
+4. Logout Your System and login again as hduser. 
+
+5. Configuring SSHsto
+Hadoop requires SSH access to manage its nodes, i.e. remote machines plus your local machine if you want to use Hadoop on it (which is what we want to do in this short tutorial). For our single-node setup of Hadoop, we therefore need to configure SSH access to localhost for the hduser user we created in the previous section. 
+I assume that you have SSH up and running on your machine and configured it to allow SSH public key authentication. If not, there are several guides available. 
+First, we have to generate an SSH key for the hduser user.  
+	#Install ssh server on your computer
+$sudo apt-get install openssh-server
+
+6. Generate SSH for communication
+$ ssh-keygen  
+Just press Enter for what ever is asked.
+Generating public/private rsa key pair. 
+Enter file in which to save the key (/home/hduser/.ssh/id_rsa):
+ Created directory '/home/hduser/.ssh'. 
+Your identification has been saved in /home/hduser/.ssh/id_rsa. 
+Your public key has been saved in /home/hduser/.ssh/id_rsa.pub.
+ The key fingerprint is: 9b:82:ea:58:b4:e0:35:d7:ff:19:66:a6:ef:ae:0e:d2hduser@localhost The key's randomart image is:
+ [...snipp...] 
+
+6. Copy Public Key to Authorized_key file & edit the permission
+#now copy the public key to the authorized_keys file, so that ssh should not require passwords every time  
+$cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys   
+#Change permissions of the authorized_keys fie to have all permissions for hduser  
+$chmod 700 ~/.ssh/authorized_keys   
+
+7. Start SSH
+If ssh is not running, then run it by giving the below command  
+$ sudo /etc/init.d/ssh  restart
+
+8. Test Your SSH Connectivity
+$ssh  localhost
+Type 'Yes', when asked for. You should be able to connect without password. If you are asked to enter password here, then something went wrong. Please check your steps.
+
+9. Disable IPV6
+Hadoop and IPV6 do not agree on the meaning of 0.0.0.0 address, thus it is advisable to disable IPV6 adding the following lines at the end of /etc/sysctl.conf
+$ sudo vim /etc/sysctl.conf
+# disable ipv6			
+net.ipv6.conf.all.disable_ipv6 = 1	
+net.ipv6.conf.default.disable_ipv6 = 1	
+net.ipv6.conf.lo.disable_ipv6 = 1	
+
+10. Check if IPv6 is disabled.
+After a system reboot the output of 
+$cat /proc/sys/net/ipv6/conf/all/disable_ipv6 
+should be 1, meaning that IPV6 is actually disabled. Without reboot it would be showing you 0.
+
+11. Download hadoop
+
+12. Move the zip file to /usr/local
+
+13. Untar the .tar.gz file and do the following changes
+   sudo tar -xvf hadoop-2.7.3.tar.gz
+   sudo rm hadoop-2.7.3.tar.gz
+   sudo ln -s hadoop-2.7.3 hadoop
+   sudo chown -R hduser:hadoop hadoop-2.7.3
+   sudo chmod 777 hadoop-2.7.3
+
+14. Edit hadoop-env.sh and configure Java. 
+Add the following to /usr/local/hadoop/etc/hadoop/hadoop-env.sh by removing
+export JAVA_HOME=${JAVA_HOME}
+$ sudo vim /usr/local/hadoop/etc/hadoop/hadoop-env.sh
+export HADOOP_OPTS=-Djava.net.preferIPv4Stack=true 
+export HADOOP_HOME_WARN_SUPPRESS="TRUE" 
+export JAVA_HOME=/usr/local/java/jdk1.8.0_131
+First Export is to disable ipv6
+
+Please Note: 
+In hadoop 2.6,the location is /usr/local/hadoop/conf/hadoop-env.sh.
+But in 2.7 there is no conf folder.
+
+15. Update $HOME/.bashrc
+Add the following lines to the end of the $HOME/.bashrc file of user hduser. If you use a shell other than bash, you should of course update its appropriate configuration files instead of .bashrc.
+$ vim ~/.bashrc  
+#type  :$ to go to the last line and then press I to switch to Insert mode
+
+# Set Hadoop-related environment variables 
+export HADOOP_HOME=/usr/local/hadoop 
+export HADOOP_PREFIX=/usr/local/hadoop
+export HADOOP_MAPRED_HOME=${HADOOP_HOME}
+export HADOOP_COMMON_HOME=${HADOOP_HOME}
+export HADOOP_HDFS_HOME=${HADOOP_HOME}
+export HADOOP_YARN_HOME=${HADOOP_HOME}
+export HADOOP_CONF_DIR=${HADOOP_HOME}/etc/hadoop
+
+# Native Path
+export HADOOP_COMMON_LIB_NATIVE_DIR=${HADOOP_PREFIX}/lib/native
+export HADOOP_OPTS="-Djava.library.path=$HADOOP_PREFIX/lib"
+
+# Set JAVA_HOME (we will also configure JAVA_HOME directly for Hadoop later on) 
+export JAVA_HOME=/usr/local/java/jdk1.8.0_131 
+# Some convenient aliases and functions for running Hadoop-related commands 
+
+unaliasfs&> /dev/null 
+aliasfs="hadoop fs" 
+unaliashls&> /dev/null 
+aliashls="fs -ls"  
+
+# If you have LZO compression enabled in your Hadoop cluster and 
+# compress job outputs with LZOP (not covered in this tutorial): 
+# Conveniently inspect an LZOP compressed file from the command 
+# line; run via: 
+# 
+# $ lzohead /hdfs/path/to/lzop/compressed/file.lzo 
+#
+# Requires installed 'lzop' command. 
+# lzohead () { hadoopfs -cat $1 | lzop -dc | head -1000 | less }  
+# Add Hadoop bin/ directory to PATH 
+export PATH=$PATH:$HADOOP_HOME/bin:$PATH:$JAVA_HOME/bin:$HADOOP_HOME/sbin 
+
+16. Update yarn-site.xml
+$ sudo  vim /usr/local/hadoop/etc/hadoop/yarn-site.xml
+Add the following snippets between the <configuration> ... </configuration> tags
+<property>
+    <name>yarn.nodemanager.aux-services</name>
+    <value>mapreduce_shuffle</value>
+</property>
+<property>
+    <name>yarn.nodemanager.aux-services.mapreduce.shuffle.class</name>
+    <value>org.apache.hadoop.mapred.ShuffleHandler</value>
+</property>
+
+17. Update core-site.xml file
+$ sudo vim /usr/local/hadoop/etc/hadoop/core-site.xml
+Add the following snippets between the <configuration> ... </configuration> tags 
+<property> 
+	<name>hadoop.tmp.dir</name> 
+	<value>/app/hadoop/tmp</value> 
+	<description>A base for other temporary directories.
+	</description> 	
+</property>  
+	
+<property>
+	<name>fs.default.name</name> 				
+	<value>hdfs://localhost:9000</value> 
+	<description>The name of the default file system.  
+		A URI whose scheme and authority determine the 			FileSystem implementation.  The uri's scheme 			determines the config property (fs.SCHEME.impl) naming 			theFileSystem implementation class. The uri's 			authority is used to determine the host, port, etc. 			for a filesystem.
+	</description> 
+</property>
+
+Note: In hadoop 2.6 location is /usr/local/hadoop/etc/hadoop/yarn-site.xml
+
+18. Create the above temp folder and give appropriate permission
+sudo mkdir -p /app/hadoop/tmp
+sudo chown hduser:hadoop -R /app/hadoop/tmp
+sudo chmod 750 /app/hadoop/tmp
+
+19. Create mapred-site.xml file from mapred-site.xml.template
+$ sudo cp  /usr/local/hadoop/etc/hadoop/mapred-site.xml.template /usr/local/hadoop/etc/hadoop/mapred-site.xml
+Add the following to /usr/local/hadoop/etc/hadoop/mapred-site.xml  between<configuration> ... </configuration>
+$ sudo vim  /usr/local/hadoop/etc/hadoop/mapred-site.xml
+<property>
+    	<name>mapreduce.framework.name</name>
+    	<value>yarn</value>
+  	</property>
+<property>
+    	<name>mapreduce.jobhistory.address</name>
+	<value>localhost:10020</value>
+	<description>Host and port for Job History Server (default 
+		0.0.0.0:10020)
+	</description>
+</property>
+
+20. Create a temporary directory which will be used as base location for DFS.
+Now we create the directory and set the required ownerships and permissions:
+
+sudo mkdir -p /usr/local/hadoop_tmp/hdfs/namenode
+sudo mkdir -p /usr/local/hadoop_tmp/hdfs/datanode
+sudo chown hduser:hadoop -R /usr/local/hadoop_tmp/
+sudo mkdir -p /usr/local/hadoop/yarn_data/hdfs/namenode
+sudo mkdir -p /usr/local/hadoop/yarn_data/hdfs/datanode
+sudo chmod 777 /usr/local/hadoop/yarn_data/hdfs/namenode
+sudo chmod 777 /usr/local/hadoop/yarn_data/hdfs/datanode
+sudo chown -R hduser:hadoop /usr/local/hadoop/yarn_data/hdfs/namenode
+sudo chown -R hduser:hadoop /usr/local/hadoop/yarn_data/hdfs/namenode
+If you forget to set the required ownerships and permissions, you will see a 	java.io.IOException when you try to format the name node in the next section).
+
+21.Update hdfs-site.xml file
+$ sudo vim /usr/local/hadoop/etc/hadoop/hdfs-site.xml
+Add the following to /usr/local/hadoop/conf/hdfs-site.xml  between<configuration> ... </configuration>
+
+<property>
+    <name>dfs.replication</name>
+    <value>1</value>
+</property>
+<property>
+    <name>dfs.namenode.name.dir</name>
+    <value>file:/usr/local/hadoop_tmp/hdfs/namenode</value>
+</property>
+<property>
+    <name>dfs.datanode.data.dir</name>
+    <value>file:/usr/local/hadoop_tmp/hdfs/datanode</value>
+</property>
+
+22. Format your namenode
+Open a new Terminal as the hadoop command will not work
+
+Format hdfs cluster with below command 
+$ hadoop namenode -format  
+If the format is not working, double check your entries in .bashrc file. The .bashrc updating come into force only if you have opened a new terminal.
+
+
+23. Starting your single-node cluster
+Congratulations, your Hadoop single node cluster is ready to use. Test your cluster by running the following commands.
+
+$ start-dfs.sh       --starts NN,SNN,DN  --Type Yes if anything asked for
+$ start-yarn.sh   --starts NodeManager,ResourceManager
+
+$ start-dfs.sh && start-yarn.sh  --In a single line
+
+Type yes if asked for
+
+
+24. Check if all the necessary hadoop daemon is running or not
+$ jps 
+4912 NameNode
+5361 ResourceManager
+5780 Jps
+5209 SecondaryNameNode
+5485 NodeManager
+5251 DataNode
+
+25. Check if home folder is created or not in hdfs
+$ hadoop fs -ls
+16/06/23 13:47:12 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+ls: `.': No such file or directory
+If You get the above error: that means Your hadoop home directory was not created successfully. Type the below command
+$ hadoop fs -mkdir -p /user/hduser (Deprecated)
+$ hdfs dfs -mkdir -p /user/hduser    (Use this)
+Now you should not get error with below command. For the first time you will not get any output as the hdfs home folder is empty.
+$hdfs dfs -ls
+
+26. Check if the hadoop is accessible through browser by hitting the below URLs.
+NameNode
+http://localhost:50070
+ResourceManager
+http://localhost:8088
+MapReduce JobHistory Server
+http://localhost:19888
+19888 is the http port of JobHistoryServer, where as 10020 is the service port which we had configured in step-8
+That is all for this tutorial, you may continue with next article in the series “Setup Multi Node Hadoop Cluster on Ubuntu”.  
+
