@@ -10,6 +10,8 @@ $sudo adduser hduser
 $sudo adduser hduser hadoop
 
 3. Add the ‘hduser’ to sudoers list so that hduser can do admin tasks.
+for that type the following command first on the terminal
+$ sudo visudo 
 Add a line under ##Allow member of group sudo to execute any command anywhere in the	format. (Right click and Paste)
   hduser ALL=(ALL) ALL 
 Press ctrl+x, Y enter enter 
