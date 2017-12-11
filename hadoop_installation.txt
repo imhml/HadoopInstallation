@@ -183,9 +183,8 @@ $ sudo vim  /usr/local/hadoop/etc/hadoop/mapred-site.xml
 20. Create a temporary directory which will be used as base location for DFS.
 Now we create the directory and set the required ownerships and permissions:
 
-sudo mkdir -p /usr/local/hadoop_tmp/hdfs/namenode
-sudo mkdir -p /usr/local/hadoop_tmp/hdfs/datanode
-sudo chown hduser:hadoop -R /usr/local/hadoop_tmp/
+
+
 sudo mkdir -p /usr/local/hadoop/yarn_data/hdfs/namenode
 sudo mkdir -p /usr/local/hadoop/yarn_data/hdfs/datanode
 sudo chmod 777 /usr/local/hadoop/yarn_data/hdfs/namenode
@@ -204,11 +203,11 @@ Add the following to /usr/local/hadoop/conf/hdfs-site.xml  between<configuration
 </property>
 <property>
     <name>dfs.namenode.name.dir</name>
-    <value>file:/usr/local/hadoop_tmp/hdfs/namenode</value>
+    <value>file:/usr/local/hadoop/yarn_data/hdfs/namenode</value>
 </property>
 <property>
     <name>dfs.datanode.data.dir</name>
-    <value>file:/usr/local/hadoop_tmp/hdfs/datanode</value>
+    <value>file:/usr/local/hadoop/yarn_data/hdfs/datanode</value>
 </property>
 
 22. Format your namenode
