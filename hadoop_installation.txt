@@ -255,6 +255,5 @@ ResourceManager
 http://localhost:8088
 MapReduce JobHistory Server
 http://localhost:19888
-19888 is the http port of JobHistoryServer, where as 10020 is the service port which we had configured in step-8
-That is all for this tutorial, you may continue with next article in the series “Setup Multi Node Hadoop Cluster on Ubuntu”.  
+19888 is the http port of JobHistoryServer
 
